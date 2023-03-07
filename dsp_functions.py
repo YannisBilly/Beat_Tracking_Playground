@@ -101,10 +101,6 @@ def find_indexes_of_spikes(concatenated_onsets):
 def find_beats(spectrogram, similarity_function, window_for_maximum_find = 27):
     onset_detection_function = first_order_differences(spectrogram, similarity_function)
 
-    # autocor_odf = autocorr(np.squeeze(min_max_scaling(onset_detection_function)))
-    # period_estimate_in_samples = find_first_maximum(autocor_odf_mse[1:])+1
-    # print(f"Estimated Tempo: {60/(period_estimate_in_samples * (HOP_LENGTH/44100))}")
-
     peaks_estimated = find_maxmin(onset_detection_function, window_for_maximum_find, "max")
 
     return peaks_estimated
@@ -115,17 +111,49 @@ def calculate_triangle_area(position_of_vertices_matrix):
 
     pass
 
-def find_IOI(indexes_of_beats, latency_factors = 4):
+def find_IOI(indexes_of_beats):
     """
     latency: the step for forward differences to calculate
     """
 
     output = np.zeros(shape = (1,1))
 
-    for latency in range(1,latency_factors+1):
-        for i in range(indexes_of_beats.shape[0] - latency):
-            output = np.concatenate((output, 
-                                     np.array([[indexes_of_beats[i + latency] - indexes_of_beats[i]]])), 
-                                     axis = 0)
+    for j in range(indexes_of_beats.shape[0]):
+        for i in range(j, indexes_of_beats.shape[0]):
+            if i != j and i+j < indexes_of_beats.shape[0]:
+                output = np.concatenate((output, 
+                                        np.array([[indexes_of_beats[i + j] - indexes_of_beats[i]]])), 
+                                        axis = 0)
+
 
     return output[1:,:]
+
+def clean_extra_peaks(peaks, tempo):
+    output = np.copy(peaks)
+
+    # forward cleanup
+    for i in range(peaks.shape[0]):
+        if (peaks[i] == 1):
+            for j in range(i+1, peaks.shape[0]):
+                if (peaks[j] == 1):
+                    if j - i < tempo*0.8:
+                        output[j] = 0
+                    break
+
+    return output
+
+def fill_beats(peaks, tempo):
+    output = np.copy(peaks)
+
+    # forward cleanup
+    for i in range(peaks.shape[0]):
+        if (peaks[i] == 1):
+            for j in range(i+1, peaks.shape[0]):
+                if (peaks[j] == 1):
+                    if j-i > 1.6*tempo and j-i < 2.4*tempo:
+                        middle_index = int((j+i)/2)
+
+                        output[middle_index] = 1
+                    break
+
+    return output
