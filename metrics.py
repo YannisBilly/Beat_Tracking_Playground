@@ -1,29 +1,89 @@
-from data_parser import *
-from global_variables import *
+import numpy as np
 
+def true_positives(annotations, estimated_beats, window_of_precision = 1e-2):
+    TP = 0 
 
+    for i in range(estimated_beats.shape[0]):
+        if len(np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)) >= 1:
+            TP += 1
 
-def logscale_spectrogram(H):
-    H[H < MAGNITUDE_LOWER_BOUND] = MAGNITUDE_LOWER_BOUND
-    H = 20*np.log10(H / MAGNITUDE_LOWER_BOUND)
-    H /= MAXIMUM_LOG_MAGNITUDE
+    return TP
 
-    return H
+def false_positives(annotations, estimated_beats, window_of_precision):
+    FP = 0 
 
-def mwmd(H1, H2):
-    return 1 - np.mean(np.sum(np.power(np.abs(H1 - H2), H1 + 1e-8)))
+    for i in range(estimated_beats.shape[0]):
+        if len(np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)) < 1:
+            FP += 1
 
-def mse(H1, H2):
-    return np.mean(np.sum(np.power(H1 - H2, 2)))
+    return FP
 
-def mae(H1, H2):
-    return np.mean(np.abs(H1 - H2))
+def false_negatives(annotations, estimated_beats, window_of_precision):
+    FN = 0 
 
-def spectral_flux(H1, H2):
-    return np.sum(np.max(H1 - H2, 0))
+    for i in range(annotations.shape[0]):
+        if len(np.argwhere(np.abs(annotations[i] - estimated_beats) < window_of_precision)) < 1:
+            FN += 1
 
-def spectral_flux_mwmd(H1, H2):
+    return FN
+
+def f1_score(annotations, estimated_beats, false_negative_weigth):
     pass
 
-def cosine_dissimilarity(H1, H2):
-    return np.dot(H1, H2) / (np.sqrt(np.sum(np.power(H1, 2))) * np.sqrt(np.sum(np.power(H2, 2))))
+def rushing_time(annotations, estimated_beats, window_of_precision):
+
+    rushing_times = []
+
+    # if true positive, calculate statistics
+    for i in range(estimated_beats.shape[0]):
+        if len(np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)) >= 1:
+            index_of_tp = np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)[0][0]
+
+            if estimated_beats[i] < annotations[index_of_tp]:
+                rushing_times.append(annotations[index_of_tp] - estimated_beats[i])
+
+    if len(rushing_times) < 1:
+        rushing_times.append(0)
+
+    return np.mean(np.array(rushing_times)), np.std(np.array(rushing_times))
+
+def dragging_time(annotations, estimated_beats, window_of_precision):
+
+    dragging_times = []
+
+    # if true positive, calculate statistics
+    for i in range(estimated_beats.shape[0]):
+        if len(np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)) >= 1:
+            index_of_tp = np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)[0][0]
+
+            if estimated_beats[i] > annotations[index_of_tp]:
+                dragging_times.append(estimated_beats[i] - annotations[index_of_tp])
+
+    if len(dragging_times) < 1:
+        dragging_times.append(0)
+
+    return np.mean(np.array(dragging_times)), np.std(np.array(dragging_times))
+
+def calculate_number_of_drags(annotations, estimated_beats, window_of_precision):
+    number_of_drags = 0
+
+    # if true positive, calculate statistics
+    for i in range(estimated_beats.shape[0]):
+        if len(np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)) >= 1:
+            index_of_tp = np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)[0][0]
+
+            if estimated_beats[i] > annotations[index_of_tp]:
+                number_of_drags += 1
+
+    return number_of_drags
+
+def calculate_number_of_rushes(annotations, estimated_beats, window_of_precision):
+    number_of_rushes = 0
+
+    for i in range(estimated_beats.shape[0]):
+        if len(np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)) >= 1:
+            index_of_tp = np.argwhere(np.abs(estimated_beats[i] - annotations) < window_of_precision)[0][0]
+
+            if estimated_beats[i] < annotations[index_of_tp]:
+                number_of_rushes += 1
+    return number_of_rushes
