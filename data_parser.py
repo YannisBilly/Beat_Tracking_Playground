@@ -39,7 +39,7 @@ class ballroom_danceset_parser():
         song = self.path_to_songs[index]
 
         annotations_of_chunks = []
-        # generate the name of song to read annotations
+
         song_name = song.split("/")[-1]
         song_name = song_name.split(".wav")[0]
 

@@ -38,10 +38,6 @@ if __name__ == "__main__":
             peak_indexes = find_indexes_of_spikes(mwmd_peaks_27)[:,1] + 2
             IOI_tests = find_IOI(peak_indexes)
 
-            # Find three potential more than 40bpm and less than 200
-            lower_estimated_tempo_threshold = (60/200) / (HOP_LENGTH/FS)
-            upper_estimated_tempo_threshold = (60/30) / (HOP_LENGTH/FS)
-
             cluster = KMedoids(n_clusters=20).fit(IOI_tests)
             x_medoids = cluster.cluster_centers_
             induced_tempo_kmedoids = np.sort(x_medoids[:,0])[0]
